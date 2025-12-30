@@ -1,0 +1,16 @@
+# Core Dependencies
+# Compatible with Python 3.12+
+tensorflow>=2.16.0
+numpy>=1.19.0,<2.0.0
+scipy>=1.7.0
+
+# Visualization & Monitoring
+matplotlib>=3.3.0
+tensorboard>=2.8.0
+
+# Utilities
+tqdm>=4.60.0
+structlog>=21.0.0
+
+# Statistical Analysis
+statsmodels>=0.13.0

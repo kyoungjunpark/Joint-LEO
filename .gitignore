@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+dist/
+build/
+
+# Virtual Environments
+venv/
+env/
+.venv
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# TensorFlow
+*.ckpt
+*.ckpt.*
+events.out.tfevents.*
+checkpoint
+
+# Training Results
+models/
+results/
+test_results*/
+ppo*/
+*.log
+
+# Data
+data/
+*.pkl
+
+# Temp
+*.tmp
+*.bak
+.mypy_cache/
+
+# Environment
+.env
