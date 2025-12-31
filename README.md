@@ -143,7 +143,7 @@ tensorboard --logdir=src/models/rl_multi_bw_share/models/pensieve1
 ```bibtex
 @inproceedings{park2026joint,
   title={Joint Optimization of Handoff and Video Rate in LEO Satellite Networks},
-  author={Park, Kyoungjun and He, Zhiyuan and Luo, Cheng and Xu, Yi and Qiu, Lili and Ge, Changhan and Muaz, Muhammad and Yang, Yuqing},
+  author={Park, Kyoungjun and He, Zhiyuan and Luo, Cheng and Xu, Yi and Qiu, Lili and Ge, Changhan and Muaz, Muhammad},
   booktitle={IEEE INFOCOM 2026-IEEE Conference on Computer Communications},
   year={2026},
   organization={IEEE}
