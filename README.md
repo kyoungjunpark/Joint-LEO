@@ -1,142 +1,152 @@
-# Joint Optimization of Handoff and Video Rate in LEO Satellite Networks
+# Joint-LEO
 
-[![License](https://img.shields.io/badge/License-BSD%202--Clause-blue.svg)](LICENSE)
-[![Python 3.7+](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
-[![TensorFlow 2.16+](https://img.shields.io/badge/TensorFlow-2.16+-orange.svg)](https://www.tensorflow.org/)
+Joint-LEO is a research codebase for joint bitrate adaptation and satellite handover in Low Earth Orbit (LEO) video streaming systems.
 
-Reinforcement learning framework for joint bitrate adaptation and satellite handover optimization in Low Earth Orbit (LEO) satellite networks.
+The repository contains PPO-based reinforcement learning models, model-predictive-control baselines, multi-user and multi-satellite environments, beamforming experiments, and several trace collections.
 
-## Overview
+## Repository Layout
 
-Joint-LEO optimizes video streaming quality over LEO satellite networks by jointly deciding:
-- **Bitrate adaptation**: Select optimal video quality based on network conditions
-- **Satellite handover**: Choose best satellite to minimize disruption
+```text
+src/
+├── data/                         # Satellite traces and video chunk sizes
+├── env/                          # Simulation environments
+│   ├── multi_bw_share/           # Multi-user bandwidth sharing
+│   ├── multi_bw_share_beamformed/# Beamforming environments
+│   ├── multi_bw_share_multi_session/
+│   ├── multi_no_bw_share/
+│   └── object/                   # Satellite and user objects
+├── models/
+│   ├── rl_multi_bw_share/        # Main PPO training and test scripts
+│   ├── rl_multi_bw_share_multi_session/
+│   ├── rl_multi_bw_share_weights/
+│   ├── mpc_bw_share/             # MPC baselines
+│   ├── mpc_bw_share_multi_session/
+│   └── references/               # Reference Pensieve implementation
+├── util/                         # Shared constants and encoders
+├── real/                         # Real-trace experiment outputs/configurations
+├── unclassified_files/           # Older experiments kept for reference
+└── requirements.txt              # Python dependencies
+```
 
-### Key Challenges
+The root `data/` directory contains local experiment artifacts and trained-model outputs. Generated checkpoints, TensorBoard logs, and test results are intentionally excluded from version control.
 
-- **Dynamic bandwidth**: LEO satellites have time-varying throughput and frequent handovers
-- **Multi-user coordination**: Fair resource allocation across concurrent streams
-- **Joint optimization**: Bitrate and handover decisions must be coordinated
+## Requirements
 
-### Algorithms
+The dependency list is in [`src/requirements.txt`](src/requirements.txt). The training scripts use TensorFlow 2.x with the TensorFlow 1.x compatibility API, `tflearn`, `structlog`, NumPy, SciPy, Statsmodels, Matplotlib, and tqdm.
 
-- **PPO (Proximal Policy Optimization)**: Deep RL with parallel multi-agent training
-- **MPC (Model Predictive Control)**: Lookahead-based optimization baselines
-- **Variants**: Centralized coordination, distributed decisions, multi-satellite support
+The pinned TensorFlow version targets an older Python environment. Python 3.7-3.9 is the safest choice for this dependency set; newer Python versions may require updating the TensorFlow pin.
 
 ## Installation
 
+Run these commands from the repository root:
+
 ```bash
-cd Joint-LEO/Joint-LEO
-pip install -r requirements.txt
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r src/requirements.txt
 ```
 
-## Quick Start
+The scripts use relative paths for traces and therefore should be launched from the working directories shown below.
 
-### Training
+## Data
+
+Satellite traces are stored under `src/data/sat_data/`:
+
+- `train/` and `test/`: simulated traces
+- `real_train/` and `real_test/`: real traces
+- `noaa_train_trace/` and `noaa_test_trace/`: NOAA traces
+- `simulated_trace/` and `test_tight/`: additional experiment traces
+- `beamformed/`: beamforming-specific data
+
+Video chunk sizes are in `src/data/video_data/envivio/` as `video_size_*` files.
+
+The active trace paths and reward constants are defined in [`src/util/constants.py`](src/util/constants.py).
+
+## PPO Training
+
+The main PPO scripts are in `src/models/rl_multi_bw_share/`. From the repository root:
 
 ```bash
 cd src/models/rl_multi_bw_share
 
-# Single-satellite baseline (Pensieve)
+# Single-user Pensieve-style baseline
 python train_pensieve.py --user 1
 
-# Centralized multi-user (3 users)
+# Centralized multi-user model
 python train_cent_dist_v2.py --user 3
 
-# Distributed multi-satellite
+# Distributed multi-satellite model
 python train_dist_multi_sat.py --user 3
 ```
 
-### Testing
+Each script also has variants for NOAA and real traces, for example:
 
 ```bash
-# Test trained model
-python test_pensieve.py ./models/pensieve1/nn_model_ep_0.ckpt 1 MVT
+python train_pensieve_noaa.py --user 1
+python train_cent_dist_v2_real.py --user 3
+python train_dist_multi_sat_real.py --user 3
 ```
 
-### MPC Baseline
+Training is long-running and writes checkpoints, summaries, and test results into the current model directory. These generated outputs are ignored by Git.
+
+## Testing A Trained Model
+
+The Pensieve test script expects a checkpoint path, user count, and handover mode. A checkpoint produced by `train_pensieve.py --user 1` is written under `pensieve1/`:
+
+```bash
+cd src/models/rl_multi_bw_share
+python test_pensieve.py ./pensieve1/nn_model_ep_0.ckpt 1 MVT
+```
+
+Other model families have corresponding `test_*.py` scripts in the same directory, including NOAA and real-trace variants.
+
+## MPC Baselines
+
+MPC entrypoints are in `src/models/mpc_bw_share/`:
 
 ```bash
 cd src/models/mpc_bw_share
 python mpc.py --user 3
 ```
 
-### GPU Configuration
+Additional variants include `mpc_noaa.py`, `mpc_real.py`, and `mpc_tight.py`. A multi-session implementation is in `src/models/mpc_bw_share_multi_session/`.
 
-```bash
-# Use specific GPU
-export CUDA_VISIBLE_DEVICES=0
-python train_pensieve.py --user 1
+## Multi-Session, Weights, And Beamforming
 
-# Use CPU
-export CUDA_VISIBLE_DEVICES=-1
-python train_pensieve.py --user 1
-```
+- Multi-session PPO scripts: `src/models/rl_multi_bw_share_multi_session/`
+- Weight-focused PPO scripts: `src/models/rl_multi_bw_share_weights/`
+- Beamforming environments and MATLAB/Python helpers: `src/env/multi_bw_share_beamformed/leo_beamforming/`
+- Older or exploratory implementations: `src/unclassified_files/`
 
-## Project Structure
-
-```
-Joint-LEO/
-├── src/
-│   ├── env/                    # Simulation environments
-│   │   ├── multi_bw_share/     # Multi-user bandwidth sharing
-│   │   └── object/             # Satellite and user objects
-│   ├── models/
-│   │   ├── rl_multi_bw_share/  # RL training/testing
-│   │   └── mpc_bw_share/       # MPC baselines
-│   ├── data/
-│   │   ├── sat_data/           # Satellite traces
-│   │   └── video_data/         # Video chunk sizes
-│   └── util/                   # Utilities and constants
-└── data/                       # Trained models (gitignored)
-```
-
-## Dataset
-
-### Satellite Traces
-
-- **Simulated**: `src/data/sat_data/train/`, `test/`
-- **Real**: `real_train/`, `real_test/`
-- **NOAA**: `noaa_train_trace/`, `noaa_test_trace/`
-
-### Video Data
-
-- **Location**: `src/data/video_data/envivio/`
-- **Format**: 48 chunks, 6 quality levels (300-4300 Kbps), 2-second chunks
+These areas contain experiment-specific scripts and may require changing constants or trace paths for a particular run.
 
 ## Configuration
 
-Key parameters in `src/util/constants.py`:
+Important defaults in `src/util/constants.py` include:
 
 ```python
-VIDEO_BIT_RATE = [300, 750, 1200, 1850, 2850, 4300]  # Kbps
+VIDEO_BIT_RATE = [300, 750, 1200, 1850, 2850, 4300]
 REBUF_PENALTY = 4.3
-SMOOTH_PENALTY = 1.0
-MPC_FUTURE_CHUNK_COUNT = 3
+SMOOTH_PENALTY = 1
 ```
 
-## Algorithms
-
-### PPO (Reinforcement Learning)
-
-- **State**: Throughput history, buffer occupancy, last bitrate, remaining chunks
-- **Action**: Bitrate level (6 options) × satellite selection
-- **Reward**: `QoE = bitrate - 4.3×rebuffer - 1.0×smoothness`
-- **Training**: 16-20 parallel agents, GAE, adaptive entropy
-
-### MPC (Model Predictive Control)
-
-- **MVT**: Greedy satellite selection by current bandwidth
-- **DualMPC**: Joint bitrate and handover optimization
-- **Oracle**: Upper bound with perfect future knowledge
-- **Lookahead**: 3-chunk horizon, harmonic mean prediction
-
-## Monitoring
+The training scripts expose the number of users through `--user`. GPU selection can be controlled with `CUDA_VISIBLE_DEVICES`:
 
 ```bash
-tensorboard --logdir=src/models/rl_multi_bw_share/models/pensieve1
+export CUDA_VISIBLE_DEVICES=0    # use GPU 0
+export CUDA_VISIBLE_DEVICES=-1   # force CPU
 ```
+
+## Validation
+
+A syntax-only check for the repository is:
+
+```bash
+python -m compileall -q src
+```
+
+This validates Python syntax but does not run a full training job. Full execution additionally requires the dependencies in `src/requirements.txt` and a compatible Python/TensorFlow environment.
 
 ## Citation
 
@@ -152,9 +162,9 @@ tensorboard --logdir=src/models/rl_multi_bw_share/models/pensieve1
 
 ## References
 
-- **Pensieve**: H. Mao et al., "Neural Adaptive Video Streaming with Pensieve," SIGCOMM 2017
-- **PPO**: J. Schulman et al., "Proximal Policy Optimization Algorithms," arXiv 2017
+- H. Mao et al., "Neural Adaptive Video Streaming with Pensieve," SIGCOMM 2017
+- J. Schulman et al., "Proximal Policy Optimization Algorithms," arXiv 2017
 
 ## License
 
-BSD 2-Clause License - see [LICENSE](LICENSE) file
+BSD 2-Clause License. See [LICENSE](LICENSE).
