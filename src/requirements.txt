@@ -1,0 +1,7 @@
+matplotlib
+tensorflow==2.8.0
+tflearn==0.5.0
+tqdm
+structlog
+scipy
+statsmodels
